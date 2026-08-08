@@ -36,7 +36,6 @@ public final class ContainerScanner {
 
     public static void start(Minecraft minecraft) {
         if (minecraft.player == null || minecraft.level == null || minecraft.gameMode == null) return;
-
         ContainerIndex.clear();
         QUEUE.clear();
         current = null;
@@ -76,7 +75,6 @@ public final class ContainerScanner {
         for (BlockPos pos : BlockPos.betweenClosed(
                 center.offset(-radius, -radius, -radius),
                 center.offset(radius, radius, radius))) {
-
             if (!minecraft.player.isWithinBlockInteractionRange(pos, 0.0)) continue;
 
             BlockEntity be = minecraft.level.getBlockEntity(pos);
@@ -111,7 +109,6 @@ public final class ContainerScanner {
 
     private static void waitForMenu(Minecraft minecraft) {
         if (!(minecraft.player.containerMenu instanceof InventoryMenu)) {
-            minecraft.gui.setScreen(null);
             readMenu(minecraft);
             return;
         }
@@ -126,10 +123,8 @@ public final class ContainerScanner {
             transition(State.OPEN_NEXT);
             return;
         }
-
         ContainerIndex.put(new IndexedContainer(current.key(), current.blocks(), List.of()));
         ContainerIndex.refreshFromMenu(current.key(), menu, minecraft.player.getInventory());
-
         minecraft.player.closeContainer();
         current = null;
         transition(State.OPEN_NEXT);
@@ -163,6 +158,13 @@ public final class ContainerScanner {
                     if (stack.isEmpty()) continue;
                     nonEmptyStacks++;
                     totalItems += stack.getCount();
+                    if (ShulkerBoxSupport.isShulkerBox(stack)) {
+                        for (ItemStack nested : ShulkerBoxSupport.contents(stack)) {
+                            if (nested.isEmpty()) continue;
+                            nonEmptyStacks++;
+                            totalItems += nested.getCount();
+                        }
+                    }
                 }
             }
 

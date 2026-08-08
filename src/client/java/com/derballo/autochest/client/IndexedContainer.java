@@ -7,8 +7,7 @@ import java.util.List;
 
 public record IndexedContainer(BlockPos key, List<BlockPos> blocks, List<ItemStack> slots) {
     public IndexedContainer {
-        key = key.immutable();
-        blocks = blocks.stream().map(BlockPos::immutable).toList();
+        blocks = List.copyOf(blocks);
         slots = slots.stream().map(ItemStack::copy).toList();
     }
 }

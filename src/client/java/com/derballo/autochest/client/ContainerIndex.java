@@ -33,6 +33,7 @@ public final class ContainerIndex {
         return BY_KEY.containsKey(key);
     }
 
+    
     public static BlockPos findKeyByBlock(BlockPos blockPos) {
         for (IndexedContainer container : BY_KEY.values()) {
             if (container.blocks().contains(blockPos)) {
@@ -42,6 +43,7 @@ public final class ContainerIndex {
         return null;
     }
 
+    
     public static boolean refreshFromMenu(
             BlockPos key,
             AbstractContainerMenu menu,
@@ -60,13 +62,15 @@ public final class ContainerIndex {
         return true;
     }
 
+    
+
+    
     public static void applyDeposited(BlockPos key, ItemStack depositedStack, int amount) {
         IndexedContainer old = BY_KEY.get(key);
         if (old == null || depositedStack.isEmpty() || amount <= 0) return;
 
         List<ItemStack> slots = old.slots().stream().map(ItemStack::copy).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         int remaining = amount;
-
         for (int i = 0; i < slots.size() && remaining > 0; i++) {
             ItemStack stack = slots.get(i);
             if (stack.isEmpty()) continue;
@@ -93,6 +97,7 @@ public final class ContainerIndex {
         put(new IndexedContainer(old.key(), old.blocks(), slots));
     }
 
+    
     public static void applyRetrieved(BlockPos key, net.minecraft.world.item.Item item, int amount) {
         IndexedContainer old = BY_KEY.get(key);
         if (old == null || item == null || amount <= 0) return;
@@ -115,6 +120,40 @@ public final class ContainerIndex {
             }
         }
 
+        put(new IndexedContainer(old.key(), old.blocks(), slots));
+    }
+
+    public static int countItemDirect(net.minecraft.world.item.Item item) {
+        int count = 0;
+        for (IndexedContainer container : BY_KEY.values()) {
+            for (ItemStack stack : container.slots()) {
+                if (!stack.isEmpty() && stack.getItem() == item) count += stack.getCount();
+            }
+        }
+        return count;
+    }
+
+    public static int countItemRecursive(net.minecraft.world.item.Item item) {
+        int count = 0;
+        for (IndexedContainer container : BY_KEY.values()) {
+            for (ItemStack stack : container.slots()) {
+                if (stack.isEmpty()) continue;
+                if (stack.getItem() == item) count += stack.getCount();
+                if (ShulkerBoxSupport.isShulkerBox(stack)) {
+                    count += ShulkerBoxSupport.countItem(stack, item);
+                }
+            }
+        }
+        return count;
+    }
+
+    public static void replaceSlot(BlockPos key, int slotIndex, ItemStack stack) {
+        IndexedContainer old = BY_KEY.get(key);
+        if (old == null || slotIndex < 0 || slotIndex >= old.slots().size()) return;
+        List<ItemStack> slots = old.slots().stream()
+                .map(ItemStack::copy)
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+        slots.set(slotIndex, stack.copy());
         put(new IndexedContainer(old.key(), old.blocks(), slots));
     }
 

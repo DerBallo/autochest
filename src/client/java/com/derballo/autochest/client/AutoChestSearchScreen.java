@@ -28,6 +28,7 @@ public final class AutoChestSearchScreen extends Screen {
     private int selectedIndex;
     private int scrollOffset;
     private boolean eventsRegistered;
+    private final ScreenReturnContext returnContext;
 
     private int panelX;
     private int panelY;
@@ -36,7 +37,12 @@ public final class AutoChestSearchScreen extends Screen {
     private int resultsY;
 
     public AutoChestSearchScreen() {
+        this(ScreenReturnContext.none());
+    }
+
+    public AutoChestSearchScreen(ScreenReturnContext returnContext) {
         super(Component.literal("AutoChest Search"));
+        this.returnContext = returnContext;
     }
 
     @Override
@@ -101,7 +107,7 @@ public final class AutoChestSearchScreen extends Screen {
                 SearchEntry selected = results.get(selectedIndex);
 
                 if (event.hasShiftDown()) {
-                    this.minecraft.gui.setScreen(new AutoChestQuantityScreen(selected.example()));
+                    this.minecraft.gui.setScreen(new AutoChestQuantityScreen(selected.example(), returnContext));
                     return false;
                 }
 
@@ -109,7 +115,8 @@ public final class AutoChestSearchScreen extends Screen {
                 ContainerRetriever.start(
                         this.minecraft,
                         selected.example(),
-                        ContainerRetriever.AmountMode.ONE_STACK
+                        ContainerRetriever.AmountMode.ONE_STACK,
+                        returnContext
                 );
             }
             return false;
@@ -126,14 +133,12 @@ public final class AutoChestSearchScreen extends Screen {
 
         for (IndexedContainer container : ContainerIndex.snapshot().values()) {
             for (ItemStack stack : container.slots()) {
-                if (stack.isEmpty()) continue;
-
-                MutableSearchEntry entry = grouped.computeIfAbsent(
-                        stack.getItem(),
-                        item -> new MutableSearchEntry(stack.copy())
-                );
-                entry.totalCount += stack.getCount();
-                entry.containerKeys.put(container.key(), Boolean.TRUE);
+                addSearchStack(grouped, container, stack);
+                if (ShulkerBoxSupport.isShulkerBox(stack)) {
+                    for (ItemStack nested : ShulkerBoxSupport.contents(stack)) {
+                        addSearchStack(grouped, container, nested);
+                    }
+                }
             }
         }
 
@@ -171,6 +176,16 @@ public final class AutoChestSearchScreen extends Screen {
         keepSelectionVisible();
     }
 
+    private static void addSearchStack(Map<Item, MutableSearchEntry> grouped, IndexedContainer container, ItemStack stack) {
+        if (stack.isEmpty()) return;
+        MutableSearchEntry entry = grouped.computeIfAbsent(
+                stack.getItem(),
+                item -> new MutableSearchEntry(stack.copy())
+        );
+        entry.totalCount += stack.getCount();
+        entry.containerKeys.put(container.key(), Boolean.TRUE);
+    }
+
     private void keepSelectionVisible() {
         if (results.isEmpty()) {
             selectedIndex = 0;
@@ -187,6 +202,7 @@ public final class AutoChestSearchScreen extends Screen {
 
     private void drawPanel(GuiGraphicsExtractor graphics) {
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xE0181818);
+        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 1, 0xFF5A5A5A);
     }
 
     private void drawResults(GuiGraphicsExtractor graphics) {
@@ -242,7 +258,7 @@ public final class AutoChestSearchScreen extends Screen {
             }
         }
 
-        String footer = "↑↓: select   Enter: stack   Ctrl+Enter: 1 item   Shift+Enter: amount   Esc: close";
+        String footer = "↑↓ select   Enter: stack   Shift+Enter: amount   Esc: close";
         int footerX = panelX + (panelWidth - this.font.width(footer)) / 2;
         graphics.text(
                 this.font,

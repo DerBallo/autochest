@@ -14,15 +14,17 @@ public final class AutoChestQuantityScreen extends Screen {
     private static final int PANEL_HEIGHT = 54;
 
     private final ItemStack requested;
+    private final ScreenReturnContext returnContext;
     private EditBox amountBox;
     private boolean eventsRegistered;
     private int panelX;
     private int panelY;
 
-    public AutoChestQuantityScreen(ItemStack requested) {
+    public AutoChestQuantityScreen(ItemStack requested, ScreenReturnContext returnContext) {
         super(Component.literal("Retrieve quantity"));
         this.requested = requested.copy();
         this.requested.setCount(1);
+        this.returnContext = returnContext;
     }
 
     @Override
@@ -70,12 +72,13 @@ public final class AutoChestQuantityScreen extends Screen {
         if (amount <= 0) return false;
 
         this.minecraft.gui.setScreen(null);
-        ContainerRetriever.start(this.minecraft, requested, amount);
+        ContainerRetriever.start(this.minecraft, requested, amount, returnContext);
         return false;
     }
 
     private void drawPanel(GuiGraphicsExtractor graphics) {
         graphics.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 0xE0181818);
+        graphics.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + 1, 0xFF5A5A5A);
     }
 
     @Override

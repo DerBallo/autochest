@@ -16,30 +16,19 @@ public final class AutoChestClient implements ClientModInitializer {
     );
 
     private static final KeyMapping INDEX_KEY = KeyMappingHelper.registerKeyMapping(
-            new KeyMapping(
-                    "key.autochest.index",
-                    InputConstants.Type.KEYSYM,
-                    InputConstants.KEY_I,
-                    CATEGORY
-            )
+            new KeyMapping("key.autochest.index", InputConstants.Type.KEYSYM, InputConstants.KEY_K, CATEGORY)
     );
 
     private static final KeyMapping DEPOSIT_KEY = KeyMappingHelper.registerKeyMapping(
-            new KeyMapping(
-                    "key.autochest.deposit_matching",
-                    InputConstants.Type.KEYSYM,
-                    InputConstants.KEY_V,
-                    CATEGORY
-            )
+            new KeyMapping("key.autochest.deposit_matching", InputConstants.Type.KEYSYM, InputConstants.KEY_V, CATEGORY)
     );
 
     private static final KeyMapping SEARCH_KEY = KeyMappingHelper.registerKeyMapping(
-            new KeyMapping(
-                    "key.autochest.search_retrieve",
-                    InputConstants.Type.KEYSYM,
-                    InputConstants.KEY_B,
-                    CATEGORY
-            )
+            new KeyMapping("key.autochest.search_retrieve", InputConstants.Type.KEYSYM, InputConstants.KEY_N, CATEGORY)
+    );
+
+    private static final KeyMapping DEPOSIT_SHULKER_KEY = KeyMappingHelper.registerKeyMapping(
+            new KeyMapping("key.autochest.deposit_shulker_contents", InputConstants.Type.KEYSYM, InputConstants.KEY_B, CATEGORY)
     );
 
     @Override
@@ -48,24 +37,18 @@ public final class AutoChestClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (INDEX_KEY.consumeClick()) {
-                if (!isBusy()) {
-                    ContainerScanner.start(client);
-                }
+                if (!isBusy()) ContainerScanner.start(client);
             }
 
             while (SEARCH_KEY.consumeClick()) {
                 if (client.player == null || isBusy()) continue;
-
-                if (ContainerIndex.size() == 0) {
-                    AutoChestChat.warning(client, "No indexed containers. Index nearby containers first.");
-                } else {
-                    client.gui.setScreen(new AutoChestSearchScreen());
-                }
+                openSearch(client, ScreenReturnContext.none());
             }
 
             ContainerScanner.tick(client);
             ContainerDepositor.tick(client);
             ContainerRetriever.tick(client);
+            ShulkerContentsDepositor.tick(client);
             ContainerIndexSynchronizer.tick(client);
         });
 
@@ -73,18 +56,40 @@ public final class AutoChestClient implements ClientModInitializer {
             if (!(screen instanceof AbstractContainerScreen<?>)) return;
 
             ScreenKeyboardEvents.allowKeyPress(screen).register((currentScreen, event) -> {
-                if (!DEPOSIT_KEY.matches(event)) return true;
                 if (!(currentScreen instanceof AbstractContainerScreen<?> containerScreen)) return true;
                 if (isBusy()) return true;
 
-                return !ContainerDepositor.startFromHoveredSlot(client, containerScreen);
+                if (DEPOSIT_KEY.matches(event)) {
+                    return !ContainerDepositor.startFromHoveredSlot(client, containerScreen);
+                }
+
+                if (DEPOSIT_SHULKER_KEY.matches(event)) {
+                    return !ShulkerContentsDepositor.startFromHoveredSlot(client, containerScreen);
+                }
+
+                if (SEARCH_KEY.matches(event)) {
+                    ScreenReturnContext context = ScreenReturnContext.capture(client, containerScreen);
+                    openSearch(client, context);
+                    return false;
+                }
+
+                return true;
             });
         });
+    }
+
+    private static void openSearch(net.minecraft.client.Minecraft client, ScreenReturnContext context) {
+        if (ContainerIndex.size() == 0) {
+            AutoChestChat.warning(client, "No indexed containers. Index nearby containers first.");
+        } else {
+            client.gui.setScreen(new AutoChestSearchScreen(context));
+        }
     }
 
     private static boolean isBusy() {
         return ContainerScanner.isScanning()
                 || ContainerDepositor.isDepositing()
-                || ContainerRetriever.isRetrieving();
+                || ContainerRetriever.isRetrieving()
+                || ShulkerContentsDepositor.isRunning();
     }
 }

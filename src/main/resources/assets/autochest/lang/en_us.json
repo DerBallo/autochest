@@ -2,5 +2,6 @@
   "key.category.autochest.autochest": "AutoChest",
   "key.autochest.index": "Index Nearby Containers",
   "key.autochest.deposit_matching": "Deposit Matching Item",
-  "key.autochest.search_retrieve": "Search & Retrieve Indexed Items"
+  "key.autochest.search_retrieve": "Search & Retrieve Indexed Items",
+  "key.autochest.deposit_shulker_contents": "Deposit Shulker Contents"
 }
