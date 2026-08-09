@@ -56,17 +56,13 @@ public final class ShulkerStorageRouter {
 
     private static Destination bestEmptyChest(Minecraft minecraft, Origin origin) {
         List<Destination> candidates = candidates(minecraft, origin, true);
+        candidates.sort(Comparator.comparingInt((Destination destination) -> emptySlotCount(destination.container(), origin)).reversed());
         return candidates.isEmpty() ? null : candidates.getFirst();
     }
 
     private static Destination bestAnyFree(Minecraft minecraft, Origin origin, Item singleType) {
         List<Destination> candidates = candidates(minecraft, origin, false);
-        if (singleType != null) {
-            candidates.sort(
-                    Comparator.comparingInt((Destination destination) -> singleTypeShulkerCount(destination.container(), origin, singleType)).reversed()
-                            .thenComparing(Comparator.comparingInt((Destination destination) -> itemCountInsideSingleTypeShulkers(destination.container(), origin, singleType)).reversed())
-            );
-        }
+        candidates.sort(Comparator.comparingInt((Destination destination) -> emptySlotCount(destination.container(), origin)).reversed());
         return candidates.isEmpty() ? null : candidates.getFirst();
     }
 
@@ -94,6 +90,15 @@ public final class ShulkerStorageRouter {
             if (isOriginSlot(indexed, origin, i)) continue;
             ItemStack stack = indexed.slots().get(i);
             if (ShulkerBoxSupport.containsOnlyItemType(stack, item)) count += ShulkerBoxSupport.countItem(stack, item);
+        }
+        return count;
+    }
+
+    private static int emptySlotCount(IndexedContainer indexed, Origin origin) {
+        int count = 0;
+        for (int i = 0; i < indexed.slots().size(); i++) {
+            if (isOriginSlot(indexed, origin, i)) continue;
+            if (indexed.slots().get(i).isEmpty()) count++;
         }
         return count;
     }

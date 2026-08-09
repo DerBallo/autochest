@@ -653,6 +653,7 @@ public final class ContainerDepositor {
 
         List<TargetChoice> matchingChests = new ArrayList<>();
         List<TargetChoice> emptyChests = new ArrayList<>();
+        List<TargetChoice> fallbackChests = new ArrayList<>();
 
         for (IndexedContainer indexed : ContainerIndex.snapshot().values()) {
             AttemptKey attemptKey = new AttemptKey(indexed.key(), -1);
@@ -679,6 +680,7 @@ public final class ContainerDepositor {
             TargetChoice choice = new TargetChoice(indexed, interactionPos, -1);
             if (containsType && capacity > 0) matchingChests.add(choice);
             if (completelyEmpty && capacity > 0) emptyChests.add(choice);
+            if (capacity > 0) fallbackChests.add(choice);
         }
 
         if (allowShulkerTargets && shouldPackIntoShulker()) {
@@ -689,7 +691,11 @@ public final class ContainerDepositor {
         matchingChests.sort(Comparator.comparingInt((TargetChoice choice) -> directItemCount(choice.container(), selected.getItem())).reversed());
         if (!matchingChests.isEmpty()) return matchingChests.getFirst();
 
-        return emptyChests.isEmpty() ? null : emptyChests.getFirst();
+        emptyChests.sort(Comparator.comparingInt((TargetChoice choice) -> emptySlotCount(choice.container())).reversed());
+        if (!emptyChests.isEmpty()) return emptyChests.getFirst();
+
+        fallbackChests.sort(Comparator.comparingInt((TargetChoice choice) -> emptySlotCount(choice.container())).reversed());
+        return fallbackChests.isEmpty() ? null : fallbackChests.getFirst();
     }
 
     private static TargetChoice chooseNonFullMatchingShulker(Minecraft minecraft) {
@@ -759,6 +765,14 @@ public final class ContainerDepositor {
         return candidates.isEmpty() ? null : candidates.getFirst();
     }
 
+    private static int emptySlotCount(IndexedContainer indexed) {
+        int count = 0;
+        for (ItemStack stack : indexed.slots()) {
+            if (stack.isEmpty()) count++;
+        }
+        return count;
+    }
+
     private static int directItemCount(IndexedContainer indexed, net.minecraft.world.item.Item item) {
         int count = 0;
         for (ItemStack stack : indexed.slots()) {
@@ -826,7 +840,6 @@ public final class ContainerDepositor {
         return -1;
     }
 
-
     private static int nthContainerMenuSlot(AbstractContainerMenu menu, Inventory inventory, int ordinal) {
         int currentOrdinal = 0;
         for (int i = 0; i < menu.slots.size(); i++) {
@@ -845,7 +858,6 @@ public final class ContainerDepositor {
         }
         return -1;
     }
-
 
     private static int freePlayerCapacityForSelected(Inventory inventory) {
         int capacity = 0;
@@ -892,7 +904,6 @@ public final class ContainerDepositor {
         }
         return firstEmpty;
     }
-
 
     private static int findPlayerDestinationSlotForPacking(AbstractContainerMenu menu, Inventory inventory, ItemStack sourceStack) {
         int firstEmpty = -1;
