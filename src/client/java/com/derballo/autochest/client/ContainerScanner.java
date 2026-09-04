@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -78,7 +79,7 @@ public final class ContainerScanner {
             if (!minecraft.player.isWithinBlockInteractionRange(pos, 0.0)) continue;
 
             BlockEntity be = minecraft.level.getBlockEntity(pos);
-            if (!(be instanceof Container)) continue;
+            if (!(be instanceof ChestBlockEntity)) continue;
 
             ContainerTarget.fromBlockEntity(minecraft.level, be)
                     .ifPresent(target -> unique.putIfAbsent(target.key(), target));

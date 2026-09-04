@@ -748,19 +748,44 @@ public final class ContainerRetriever {
         }
     }
 
-    private static int retrievePartialFromSlot(Minecraft minecraft, AbstractContainerMenu menu, Inventory inventory, int sourceMenuSlot, int wanted) {
+    private static int retrievePartialFromSlot(
+            Minecraft minecraft,
+            AbstractContainerMenu menu,
+            Inventory inventory,
+            int sourceMenuSlot,
+            int wanted
+    ) {
         if (wanted <= 0) return 0;
-        ItemStack source = menu.slots.get(sourceMenuSlot).getItem();
+
+        ItemStack source = menu.slots.get(sourceMenuSlot).getItem().copy();
         if (!isSelectedType(source)) return 0;
+
         int before = countSelectedInInventory(inventory);
+
         pickup(minecraft, menu, sourceMenuSlot, 0);
+
         for (int i = 0; i < wanted; i++) {
-            int destination = findPlayerDestinationSlot(menu, inventory, source);
+            if (menu.getCarried().isEmpty()) break;
+
+            int destination = findPlayerDestinationSlot(
+                    menu,
+                    inventory,
+                    menu.getCarried()
+            );
+
             if (destination < 0) break;
+
             pickup(minecraft, menu, destination, 1);
         }
-        pickup(minecraft, menu, sourceMenuSlot, 0);
-        return Math.max(0, countSelectedInInventory(inventory) - before);
+
+        if (!menu.getCarried().isEmpty()) {
+            pickup(minecraft, menu, sourceMenuSlot, 0);
+        }
+
+        return Math.max(
+                0,
+                countSelectedInInventory(inventory) - before
+        );
     }
 
     private static void retrieveMaximum(Minecraft minecraft, AbstractContainerMenu menu, Inventory inventory) {
@@ -785,12 +810,17 @@ public final class ContainerRetriever {
             Slot slot = menu.slots.get(menuSlot);
             if (slot.container != inventory || !slot.mayPlace(sourceStack)) continue;
             ItemStack existing = slot.getItem();
+
+            if (
+                    ItemStack.isSameItemSameComponents(existing, sourceStack)
+                            && existing.getCount() < Math.min(existing.getMaxStackSize(), slot.getMaxStackSize(sourceStack))
+            ){
+                return menuSlot;
+            }
+
             if (existing.isEmpty()) {
                 if (firstEmpty < 0) firstEmpty = menuSlot;
-                continue;
             }
-            if (ItemStack.isSameItemSameComponents(existing, sourceStack)
-                    && existing.getCount() < Math.min(existing.getMaxStackSize(), slot.getMaxStackSize(sourceStack))) return menuSlot;
         }
         return firstEmpty;
     }
